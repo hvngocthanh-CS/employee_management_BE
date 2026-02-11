@@ -1,56 +1,48 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.core.deps import get_current_user, require_admin
+from app.models.department import Department
 from app.models.user import User
-from app.schemas.department import (
-    DepartmentCreate,
-    DepartmentUpdate,
-    DepartmentResponse,
-    DepartmentWithStats
-)
-from app.crud.department import department as crud_department
+from app.schemas.department import DepartmentResponse, DepartmentCreate, DepartmentUpdate
+from app.core.deps import get_current_user, require_admin
+from app import crud
 
 router = APIRouter()
 
 
-@router.get("/", response_model=List[DepartmentWithStats])
-def list_departments(
-    *,
-    db: Session = Depends(get_db),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
-    current_user: User = Depends(get_current_user)
-):
-    """List all departments với employee count"""
-    from sqlalchemy import func
-    from app.models.department import Department
-    from app.models.employee import Employee
+@router.get("/")
+def list_departments(db: Session = Depends(get_db)):
+    """
+    List all departments - đơn giản cho WPF
+    """
+    departments = db.query(Department).all()
+    return {"data": [{
+        "id": d.id,
+        "name": d.name,
+        "code": d.code,
+        "description": d.description
+    } for d in departments], "total": len(departments)}
+
+
+@router.post("/")
+def create_department(department_in: dict, db: Session = Depends(get_db)):
+    """
+    Create department - đơn giản cho WPF
+    """
+    new_department = Department(
+        name=department_in.get("name"),
+        description=department_in.get("description", "")
+    )
+    db.add(new_department)
+    db.commit()
+    db.refresh(new_department)
     
-    departments = db.query(
-        Department,
-        func.count(Employee.id).label('employee_count')
-    ).outerjoin(
-        Employee, Department.id == Employee.department_id
-    ).group_by(
-        Department.id
-    ).offset(skip).limit(limit).all()
-    
-    result = []
-    for dept, count in departments:
-        dept_dict = {
-            "id": dept.id,
-            "name": dept.name,
-            "code": dept.code,
-            "description": dept.description,
-            "created_at": dept.created_at,
-            "updated_at": dept.updated_at,
-            "employee_count": count
-        }
-        result.append(DepartmentWithStats(**dept_dict))
-    
-    return result
+    return {
+        "message": "Department created successfully",
+        "id": new_department.id,
+        "name": new_department.name,
+        "description": new_department.description
+    }
 
 
 @router.get("/{department_id}", response_model=DepartmentResponse)
@@ -61,7 +53,7 @@ def get_department(
     current_user: User = Depends(get_current_user)
 ):
     """Get department by ID"""
-    department = crud_department.get(db, id=department_id)
+    department = crud.department.get(db, id=department_id)
     if not department:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -82,14 +74,14 @@ def create_department(
     Yêu cầu role ADMIN
     """
     # Check if code exists
-    existing = crud_department.get_by_code(db, code=department_in.code)
+    existing = crud.department.get_by_code(db, code=department_in.code)
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Department code already exists"
         )
     
-    department = crud_department.create(db, obj_in=department_in)
+    department = crud.department.create(db, obj_in=department_in)
     return department
 
 
@@ -105,7 +97,7 @@ def update_department(
     Update department
     Yêu cầu role ADMIN
     """
-    department = crud_department.get(db, id=department_id)
+    department = crud.department.get(db, id=department_id)
     if not department:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -114,14 +106,14 @@ def update_department(
     
     # Check code uniqueness if updating
     if department_in.code and department_in.code != department.code:
-        existing = crud_department.get_by_code(db, code=department_in.code)
+        existing = crud.department.get_by_code(db, code=department_in.code)
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Department code already exists"
             )
     
-    department = crud_department.update(db, db_obj=department, obj_in=department_in)
+    department = crud.department.update(db, db_obj=department, obj_in=department_in)
     return department
 
 
@@ -136,7 +128,7 @@ def delete_department(
     Delete department
     Yêu cầu role ADMIN
     """
-    department = crud_department.get(db, id=department_id)
+    department = crud.department.get(db, id=department_id)
     if not department:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -155,5 +147,5 @@ def delete_department(
             detail=f"Cannot delete department with {employee_count} employees"
         )
     
-    crud_department.delete(db, id=department_id)
+    crud.department.delete(db, id=department_id)
     return None

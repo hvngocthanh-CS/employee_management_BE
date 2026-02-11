@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.v1 import api_router
-from app.database import engine, Base
+from app.database import engine, Base, init_db
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -12,6 +12,13 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Create all database tables on startup
+def create_tables():
+    """Create all database tables"""
+    Base.metadata.create_all(bind=engine)
+
+create_tables()
 
 # CORS Middleware
 app.add_middleware(

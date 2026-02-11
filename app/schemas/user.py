@@ -12,20 +12,23 @@ class UserBase(BaseModel):
 
 
 class UserCreate(BaseModel):
-    """Schema cho tạo User mới"""
-    employee_id: int = Field(..., description="ID nhân viên (phải tồn tại)")
+    """Schema cho tạo User mới - đơn giản cho WPF"""
     username: str = Field(..., min_length=3, max_length=50, description="Username duy nhất")
     password: str = Field(..., min_length=6, description="Password (tối thiểu 6 ký tự)")
-    role: UserRole = Field(default=UserRole.EMPLOYEE, description="User role")
-    is_active: bool = Field(default=True, description="Trạng thái active")
     
-    @field_validator('username')
+    @field_validator('password')
     @classmethod
-    def validate_username(cls, v):
-        """Validate username không chứa ký tự đặc biệt"""
-        if not v.isalnum() and '_' not in v:
-            raise ValueError('Username chỉ được chứa chữ, số và dấu gạch dưới')
-        return v.lower()
+    def validate_password(cls, v):
+        """Validate password strength"""
+        if len(v) < 6:
+            raise ValueError('Password phải có ít nhất 6 ký tự')
+        return v
+
+
+class UserCreateWithEmployee(UserBase):
+    """Schema cho tạo User mới với employee_id"""
+    employee_id: int = Field(..., description="ID nhân viên (phải tồn tại)")
+    password: str = Field(..., min_length=6, description="Password (tối thiểu 6 ký tự)")
     
     @field_validator('password')
     @classmethod

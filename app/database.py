@@ -7,13 +7,20 @@ class Base(DeclarativeBase):
     pass
 
 
-engine = create_engine(
-    settings.DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
-    echo=settings.DEBUG
-)
+# SQLite configuration
+engine_kwargs = {
+    "pool_pre_ping": True,
+    "echo": settings.DEBUG
+}
+
+# For SQLite, use different pool settings
+if settings.DATABASE_URL.startswith("sqlite"):
+    engine_kwargs = {
+        "connect_args": {"check_same_thread": False},
+        "echo": settings.DEBUG
+    }
+
+engine = create_engine(settings.DATABASE_URL, **engine_kwargs)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

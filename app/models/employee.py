@@ -25,9 +25,11 @@ class Employee(Base):
     __tablename__ = "employees"
     
     id = Column(Integer, primary_key=True, index=True)
-    employee_code = Column(String(20), unique=True, nullable=False, index=True)
-    full_name = Column(String(100), nullable=False, index=True)
-    email = Column(String(100), unique=True, nullable=False, index=True)
+    employee_code = Column(String(20), unique=True, nullable=True, index=True)
+    first_name = Column(String(50), nullable=True)
+    last_name = Column(String(50), nullable=True)
+    full_name = Column(String(100), nullable=True, index=True)
+    email = Column(String(100), nullable=True, index=True)
     phone = Column(String(20), nullable=True, index=True)
     date_of_birth = Column(Date, nullable=True, index=True)
     
@@ -38,7 +40,7 @@ class Employee(Base):
     city = Column(String(100), nullable=True, index=True)
     department_id = Column(Integer, ForeignKey("departments.id", ondelete="SET NULL"), nullable=True, index=True)
     position_id = Column(Integer, ForeignKey("positions.id", ondelete="SET NULL"), nullable=True, index=True)
-    hire_date = Column(Date, nullable=False, index=True)
+    hire_date = Column(Date, nullable=True, index=True)
     
     employment_status = Column(
         Enum(EmploymentStatus, name="employment_status_enum"),

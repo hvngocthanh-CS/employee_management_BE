@@ -1,31 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from datetime import timedelta
 from app.database import get_db
-from app.schemas.user import UserCreate, UserLogin, Token
+from app.schemas.user import UserCreate
 from app.models.user import User
-from app.core.security import verify_password, get_password_hash, create_access_token
-from app.core.config import settings
 
 router = APIRouter()
 
 
-@router.post("/login", response_model=Token)
-def login(user_in: UserLogin, db: Session = Depends(get_db)):
+@router.post("/login")
+def login(user_in: UserCreate, db: Session = Depends(get_db)):
     """
-    Login với username và password - return JWT token
+    Login với username và password
     """
     # Kiểm tra username trong DB
     user = db.query(User).filter(User.username == user_in.username).first()
     
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-        )
-    
-    # Verify password
-    if not verify_password(user_in.password, user.hashed_password):
+    if not user or user.hashed_password != user_in.password:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -33,27 +23,21 @@ def login(user_in: UserLogin, db: Session = Depends(get_db)):
     
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user"
         )
     
-    # Create access token
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username, "user_id": user.id},
-        expires_delta=access_token_expires
-    )
-    
     return {
-        "access_token": access_token,
-        "token_type": "bearer"
+        "message": "Login successful",
+        "username": user.username,
+        "id": user.id
     }
 
 
 @router.post("/register")
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
     """
-    Register new user
+    Register new user - đơn giản cho WPF
     """
     # Kiểm tra username đã tồn tại?
     existing_user = db.query(User).filter(User.username == user_in.username).first()
@@ -63,11 +47,10 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
             detail="Username already exists"
         )
     
-    # Tạo user mới với password hashed
-    hashed_password = get_password_hash(user_in.password)
+    # Tạo user mới (không cần employee_id)
     new_user = User(
         username=user_in.username,
-        hashed_password=hashed_password,
+        hashed_password=user_in.password,
         is_active=True
     )
     db.add(new_user)
@@ -79,4 +62,3 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
         "username": new_user.username,
         "id": new_user.id
     }
-
