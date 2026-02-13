@@ -1,9 +1,7 @@
 from app.schemas.department import (
-    DepartmentBase,
     DepartmentCreate,
     DepartmentUpdate,
     DepartmentResponse,
-    DepartmentWithStats
 )
 from app.schemas.position import (
     PositionBase,
@@ -13,11 +11,9 @@ from app.schemas.position import (
     PositionWithStats
 )
 from app.schemas.employee import (
-    EmployeeBase,
     EmployeeCreate,
     EmployeeUpdate,
     EmployeeResponse,
-    EmployeeListResponse
 )
 from app.schemas.user import (
     UserBase,
@@ -65,16 +61,16 @@ from app.schemas.leave import (
 
 __all__ = [
     # Department
-    "DepartmentBase", "DepartmentCreate", "DepartmentUpdate",
-    "DepartmentResponse", "DepartmentWithStats",
+    "DepartmentCreate", "DepartmentUpdate",
+    "DepartmentResponse",
     
     # Position
     "PositionBase", "PositionCreate", "PositionUpdate",
     "PositionResponse", "PositionWithStats",
     
     # Employee
-    "EmployeeBase", "EmployeeCreate", "EmployeeUpdate",
-    "EmployeeResponse", "EmployeeListResponse",
+    "EmployeeCreate", "EmployeeUpdate",
+    "EmployeeResponse",
     
     # User
     "UserBase", "UserCreate", "UserUpdate", "UserChangePassword",

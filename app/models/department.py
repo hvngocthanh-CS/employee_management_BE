@@ -1,31 +1,43 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text
+"""
+Department Model
+================
+Represents a department in the organization.
+Demonstrates:
+  - Basic SQLAlchemy model structure
+  - One-to-Many relationship (one dept has many employees)
+  - Indexes for frequently queried fields
+"""
+
+from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 from app.database import Base
 
 
 class Department(Base):
-    """Department model"""
+    """
+    Department SQLAlchemy model
+    
+    This table stores department information. Employees belong to departments.
+    """
     __tablename__ = "departments"
     
-    # Columns
+    # Primary Key
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False, index=True)
-    code = Column(String(20), unique=True, nullable=True, index=True)
-    description = Column(Text, nullable=True)
     
-    # Timestamps
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    # Columns - name must be unique (each department has a distinct name)
+    name = Column(String(100), nullable=False, unique=True, index=True)
     
     # Relationships
-    # lazy='selectin' giúp load dữ liệu employees hiệu quả (tránh N+1 query)
+    # Tells SQLAlchemy: Department has many Employees
+    # back_populates="department" creates the reverse relationship
+    # lazy='selectin' loads employees efficiently when we access dept.employees
     employees = relationship(
-        "Employee", 
+        "Employee",
         back_populates="department",
-        lazy='selectin',
-        cascade="all, delete-orphan"
+        lazy="selectin",
+        cascade="all, delete-orphan"  # Delete employees when dept is deleted
     )
     
     def __repr__(self):
-        return f"<Department(id={self.id}, name='{self.name}', code='{self.code}')>"
+        """String representation for debugging"""
+        return f"<Department(id={self.id}, name='{self.name}')>"

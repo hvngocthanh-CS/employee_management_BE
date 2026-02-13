@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from app.models.user import UserRole
 
 
@@ -89,11 +89,39 @@ class UserLogin(BaseModel):
     password: str = Field(..., description="Password")
 
 
+class UserProfile(BaseModel):
+    """Schema cho user profile với permissions"""
+    id: int
+    username: str
+    role: str
+    employee_id: Optional[int] = None
+    is_active: bool
+    permissions: List[str] = []
+    menu_permissions: Dict[str, Any] = {}
+    created_at: datetime
+    last_login: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class UserInToken(BaseModel):
+    """Schema cho user data trong token response"""
+    id: int
+    username: str
+    role: str
+    employee_id: Optional[int] = None
+    is_active: bool
+    permissions: List[str] = []
+    menu_permissions: Dict[str, Any] = {}
+
+
 class Token(BaseModel):
-    """Schema cho JWT token response"""
+    """Schema cho JWT token response với user info"""
     access_token: str = Field(..., description="JWT access token")
     token_type: str = Field(default="bearer", description="Token type")
     expires_in: Optional[int] = Field(None, description="Token expiration time in seconds")
+    user: Optional[UserInToken] = None  # Include user info in login response
 
 
 class TokenData(BaseModel):

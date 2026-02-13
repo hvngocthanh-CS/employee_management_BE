@@ -1,29 +1,29 @@
+"""
+API v1 Router
+=============
+Combines all v1 API routers
+"""
+
 from fastapi import APIRouter
 from app.api.v1 import (
     auth,
-    user,
     departments,
-    positions,
     employees,
+    positions,
+    user,
     salaries,
     attendances,
     leaves
 )
 
-# Tạo router chính cho API v1
+# Create main router for API v1
 api_router = APIRouter()
 
-# Include các sub-routers
+# Include all routers
 api_router.include_router(
     auth.router,
     prefix="/auth",
     tags=["Authentication"]
-)
-
-api_router.include_router(
-    user.router,
-    prefix="/users",
-    tags=["Users"]
 )
 
 api_router.include_router(
@@ -42,6 +42,12 @@ api_router.include_router(
     employees.router,
     prefix="/employees",
     tags=["Employees"]
+)
+
+api_router.include_router(
+    user.router,
+    prefix="/users",
+    tags=["Users"]
 )
 
 api_router.include_router(

@@ -1,151 +1,166 @@
+"""
+Department API Router
+=====================
+Endpoints for managing departments.
+
+Demonstrates:
+  - GET /departments - list all
+  - GET /departments/{id} - get one
+  - POST /departments - create
+  - PUT /departments/{id} - update
+  - DELETE /departments/{id} - delete
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.department import Department
-from app.models.user import User
-from app.schemas.department import DepartmentResponse, DepartmentCreate, DepartmentUpdate
-from app.core.deps import get_current_user, require_admin
-from app import crud
+from app.schemas.department import DepartmentCreate, DepartmentUpdate, DepartmentResponse
+from app.crud import department as crud_department
 
+# Create router for department endpoints
 router = APIRouter()
 
 
-@router.get("/")
-def list_departments(db: Session = Depends(get_db)):
-    """
-    List all departments - đơn giản cho WPF
-    """
-    departments = db.query(Department).all()
-    return {"data": [{
-        "id": d.id,
-        "name": d.name,
-        "code": d.code,
-        "description": d.description
-    } for d in departments], "total": len(departments)}
-
-
-@router.post("/")
-def create_department(department_in: dict, db: Session = Depends(get_db)):
-    """
-    Create department - đơn giản cho WPF
-    """
-    new_department = Department(
-        name=department_in.get("name"),
-        description=department_in.get("description", "")
-    )
-    db.add(new_department)
-    db.commit()
-    db.refresh(new_department)
-    
-    return {
-        "message": "Department created successfully",
-        "id": new_department.id,
-        "name": new_department.name,
-        "description": new_department.description
-    }
-
-
-@router.get("/{department_id}", response_model=DepartmentResponse)
-def get_department(
-    *,
-    db: Session = Depends(get_db),
-    department_id: int,
-    current_user: User = Depends(get_current_user)
+@router.get("/", response_model=list[DepartmentResponse])
+def list_departments(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
 ):
-    """Get department by ID"""
-    department = crud.department.get(db, id=department_id)
-    if not department:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Department not found"
-        )
-    return department
+    """
+    Get all departments.
+    
+    Query Parameters:
+      skip: Number of records to skip (default: 0)
+      limit: Maximum records to return (default: 100)
+      
+    Returns:
+      List of departments with id and name
+    """
+    departments = crud_department.get_multi(db, skip=skip, limit=limit)
+    return departments
 
 
 @router.post("/", response_model=DepartmentResponse, status_code=status.HTTP_201_CREATED)
 def create_department(
-    *,
-    db: Session = Depends(get_db),
     department_in: DepartmentCreate,
-    current_user: User = Depends(require_admin)
+    db: Session = Depends(get_db)
 ):
     """
-    Create new department
-    Yêu cầu role ADMIN
+    Create a new department.
+    
+    Request Body:
+      {
+        "name": "Engineering"
+      }
+      
+    Validation:
+      - name must be unique
+      - name is required
+      
+    Returns:
+      The created department with auto-generated id
     """
-    # Check if code exists
-    existing = crud.department.get_by_code(db, code=department_in.code)
+    # Check if department with this name already exists
+    # This prevents duplicate department names
+    existing = crud_department.get_by_name(db, name=department_in.name)
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Department code already exists"
+            detail=f"Department with name '{department_in.name}' already exists"
         )
     
-    department = crud.department.create(db, obj_in=department_in)
+    # Create and save the new department
+    department = crud_department.create(db, obj_in=department_in)
+    return department
+
+
+@router.get("/{department_id}", response_model=DepartmentResponse)
+def get_department(
+    department_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get a single department by ID.
+    
+    Path Parameters:
+      department_id: The department's primary key
+      
+    Returns:
+      Department data or 404 if not found
+    """
+    department = crud_department.get(db, id=department_id)
+    if not department:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Department with id {department_id} not found"
+        )
     return department
 
 
 @router.put("/{department_id}", response_model=DepartmentResponse)
 def update_department(
-    *,
-    db: Session = Depends(get_db),
     department_id: int,
     department_in: DepartmentUpdate,
-    current_user: User = Depends(require_admin)
+    db: Session = Depends(get_db)
 ):
     """
-    Update department
-    Yêu cầu role ADMIN
+    Update a department.
+    
+    Path Parameters:
+      department_id: The department's primary key
+      
+    Request Body (all optional):
+      {
+        "name": "New Department Name"
+      }
+      
+    Returns:
+      Updated department data or 404 if not found
     """
-    department = crud.department.get(db, id=department_id)
+    department = crud_department.get(db, id=department_id)
     if not department:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Department not found"
+            detail=f"Department with id {department_id} not found"
         )
     
-    # Check code uniqueness if updating
-    if department_in.code and department_in.code != department.code:
-        existing = crud.department.get_by_code(db, code=department_in.code)
+    # If new name provided, check for duplicates
+    if department_in.name and department_in.name != department.name:
+        existing = crud_department.get_by_name(db, name=department_in.name)
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Department code already exists"
+                detail=f"Department with name '{department_in.name}' already exists"
             )
     
-    department = crud.department.update(db, db_obj=department, obj_in=department_in)
+    # Update and save
+    department = crud_department.update(db, db_obj=department, obj_in=department_in)
     return department
 
 
 @router.delete("/{department_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_department(
-    *,
-    db: Session = Depends(get_db),
     department_id: int,
-    current_user: User = Depends(require_admin)
+    db: Session = Depends(get_db)
 ):
     """
-    Delete department
-    Yêu cầu role ADMIN
+    Delete a department by ID.
+    
+    Path Parameters:
+      department_id: The department's primary key
+      
+    Returns:
+      No content (204) on successful deletion or 404 if not found
+      
+    Note:
+      Deleting a department will cascade-delete all employees in it
+      (due to cascade="all, delete-orphan" in the model)
     """
-    department = crud.department.get(db, id=department_id)
+    department = crud_department.delete(db, id=department_id)
     if not department:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Department not found"
+            detail=f"Department with id {department_id} not found"
         )
-    
-    # Check if department has employees
-    from app.models.employee import Employee
-    employee_count = db.query(Employee).filter(
-        Employee.department_id == department_id
-    ).count()
-    
-    if employee_count > 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot delete department with {employee_count} employees"
-        )
-    
-    crud.department.delete(db, id=department_id)
-    return None
+    # 204 responses don't have a body, so we just return

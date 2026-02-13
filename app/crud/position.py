@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, case
 from app.crud.base import CRUDBase
 from app.models.position import Position, PositionLevel
-from app.models.employee import Employee, EmploymentStatus
+from app.models.employee import Employee
 from app.schemas.position import PositionCreate, PositionUpdate
 
 
@@ -39,11 +39,8 @@ class CRUDPosition(CRUDBase[Position, PositionCreate, PositionUpdate]):
         result = db.query(
             Position,
             func.count(Employee.id).label('employee_count'),
-            func.count(
-                case((Employee.employment_status == EmploymentStatus.ACTIVE, 1))
-            ).label('active_count')
         )\
-        .outerjoin(Employee, Position.id == Employee.position_id)\
+        .outerjoin(Position.employees)\
         .group_by(Position.id)\
         .all()
         
@@ -51,7 +48,6 @@ class CRUDPosition(CRUDBase[Position, PositionCreate, PositionUpdate]):
             {
                 "position": row.Position,
                 "employee_count": row.employee_count,
-                "active_employee_count": row.active_count
             }
             for row in result
         ]

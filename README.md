@@ -1,296 +1,202 @@
 # Employee Management System
 
-A comprehensive employee management system built with FastAPI, PostgreSQL, and SQLAlchemy.
+A full-stack employee management application built with FastAPI backend and WPF frontend.
 
-## Features
+## Backend (FastAPI)
 
-- **Departments Management**: Create and manage departments
-- **Positions Management**: Manage job positions with levels (junior, senior, manager, director, executive)
-- **Employee Management**: Complete employee information with department and position assignments
-- **User Authentication**: JWT-based authentication with role-based access control (admin, manager, employee)
-- **Salary Management**: Track employee salaries with effective dates
-- **Attendance Tracking**: Record and manage employee attendance
-- **Leave Management**: Handle leave requests with approval workflow
+### Features
+- **Authentication**: JWT-based user authentication and authorization
+- **Departments**: CRUD operations for managing departments
+- **Positions**: CRUD operations for job positions (Junior, Senior, Manager, Director, Executive)
+- **Employees**: Full employee lifecycle management
+- **Users**: User account management with role-based access (Admin, Manager, Employee)
+- **Salaries**: Salary tracking and history management
+- **Attendances**: Employee attendance tracking and reporting
+- **Leaves**: Leave request management and approval workflow
 
-## Technology Stack
+### Database Schema
+- **departments**: Company departments
+- **positions**: Job positions with hierarchical levels
+- **employees**: Employee information linked to departments and positions
+- **users**: Authentication and authorization 
+- **salaries**: Salary history with effective dates
+- **attendances**: Daily attendance records
+- **leaves**: Leave requests with approval workflow
 
-- **FastAPI**: Modern, fast web framework for building APIs
-- **PostgreSQL**: Robust relational database
-- **SQLAlchemy**: SQL toolkit and ORM
-- **Alembic**: Database migration tool
-- **JWT**: JSON Web Tokens for authentication
-- **Pydantic**: Data validation using Python type annotations
+### Technologies
+- **FastAPI**: Modern Python web framework
+- **SQLAlchemy**: ORM for database operations
+- **Alembic**: Database migration management
+- **Pydantic**: Data validation and serialization
+- **JWT**: Token-based authentication
+- **SQLite**: Development database
+
+### Running the Backend
+
+```bash
+cd employee_management_BE
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create/update database
+python -c "from app.database import engine; from app.models import Base; Base.metadata.create_all(bind=engine)"
+
+# Start the server
+uvicorn app.main:app --reload --port 8000
+```
+
+### API Documentation
+Once the server is running, visit:
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
+### Key API Endpoints
+
+#### Authentication
+- `POST /api/v1/auth/login` - User login
+- `POST /api/v1/auth/register` - User registration
+
+#### Departments
+- `GET /api/v1/departments` - List all departments
+- `POST /api/v1/departments` - Create department
+- `PUT /api/v1/departments/{id}` - Update department
+- `DELETE /api/v1/departments/{id}` - Delete department
+
+#### Positions
+- `GET /api/v1/positions` - List all positions
+- `POST /api/v1/positions` - Create position (requires auth)
+- `PUT /api/v1/positions/{id}` - Update position (requires auth)
+- `DELETE /api/v1/positions/{id}` - Delete position (requires auth)
+
+#### Employees
+- `GET /api/v1/employees` - List all employees
+- `POST /api/v1/employees` - Create employee
+- `PUT /api/v1/employees/{id}` - Update employee
+- `DELETE /api/v1/employees/{id}` - Delete employee
+
+## Frontend (WPF)
+
+### Features
+- **Dashboard**: Overview with statistics and recent activities
+- **Navigation**: Modern sidebar navigation with role-based menus
+- **Authentication**: Login/Register with session management
+- **Department Management**: Full CRUD operations
+- **Employee Management**: Employee data management
+- **Position Management**: Job position management
+- **Responsive Design**: Modern UI with Material Design colors
+
+### Technologies
+- **WPF (.NET 9)**: Desktop application framework
+- **C#**: Programming language
+- **Newtonsoft.Json**: JSON serialization
+- **HttpClient**: REST API communication
+
+### Running the Frontend
+
+```bash
+cd employee_management_FE/EmployeeManagement
+
+# Restore packages
+dotnet restore
+
+# Build and run
+dotnet run
+```
+
+### Application Flow
+1. **Login/Register**: User authentication
+2. **Dashboard**: Main overview page with statistics
+3. **Navigation**: Access different modules via sidebar
+4. **CRUD Operations**: Create, Read, Update, Delete data
+5. **Session Management**: Secure token-based sessions
+
+## Learning Objectives
+
+This project demonstrates:
+
+### Backend Development
+- **RESTful API Design**: Proper HTTP methods and status codes
+- **Database Design**: Normalized schema with relationships
+- **ORM Usage**: SQLAlchemy for database operations
+- **Migration Management**: Alembic for schema changes
+- **Authentication**: JWT token implementation
+- **Validation**: Pydantic schemas for request/response validation
+- **Error Handling**: Proper exception handling and error responses
+- **API Documentation**: Automatic OpenAPI documentation
+
+### Frontend Development
+- **API Integration**: Consuming REST APIs
+- **Modern UI Design**: Material Design inspired interface
+- **Navigation Patterns**: Frame-based navigation
+- **Data Binding**: WPF data binding and MVVM patterns
+- **Session Management**: Token storage and management
+- **Error Handling**: User-friendly error messages
+
+### Full-Stack Integration
+- **Client-Server Communication**: HTTP request/response cycle
+- **Authentication Flow**: Login, token storage, API authentication
+- **Data Flow**: Frontend forms -> API -> Database -> API -> Frontend display
+- **Error Propagation**: Backend errors displayed in frontend
 
 ## Project Structure
 
 ```
-employee-management/
+employee_management_BE/
 ├── app/
-│   ├── __init__.py
-│   ├── main.py                 # FastAPI application entry point
-│   ├── database.py             # Database configuration
-│   │
-│   ├── models/                 # SQLAlchemy Models
-│   │   ├── __init__.py
-│   │   ├── department.py
-│   │   ├── position.py
-│   │   ├── employee.py
-│   │   ├── user.py
-│   │   ├── salary.py
-│   │   ├── attendance.py
-│   │   └── leave.py
-│   │
-│   ├── schemas/                # Pydantic Schemas
-│   │   ├── __init__.py
-│   │   ├── department.py
-│   │   ├── position.py
-│   │   ├── employee.py
-│   │   ├── user.py
-│   │   ├── salary.py
-│   │   ├── attendance.py
-│   │   └── leave.py
-│   │
-│   ├── crud/                   # CRUD Operations
-│   │   ├── __init__.py
-│   │   ├── department.py
-│   │   ├── position.py
-│   │   ├── employee.py
-│   │   ├── user.py
-│   │   ├── salary.py
-│   │   ├── attendance.py
-│   │   └── leave.py
-│   │
-│   ├── api/                    # API Endpoints
-│   │   ├── __init__.py
-│   │   └── v1/
-│   │       ├── __init__.py
-│   │       ├── auth.py         # Login, register
-│   │       ├── departments.py
-│   │       ├── positions.py
-│   │       ├── employees.py
-│   │       ├── salaries.py
-│   │       ├── attendances.py
-│   │       └── leaves.py
-│   │
-│   ├── core/                   # Core configs
-│   │   ├── __init__.py
-│   │   ├── config.py           # Settings
-│   │   ├── security.py         # Password hash, JWT
-│   │   └── deps.py             # Dependencies (get_current_user)
-│   │
-│   └── utils/                  # Helper functions
-│       ├── __init__.py
-│       └── helpers.py
-│
-├── alembic/                    # Database migrations
-│   ├── versions/
-│   ├── env.py
-│   └── script.py.mako
-│
-├── .env                        # Environment variables
-├── .gitignore                  # Git ignore
-├── requirements.txt            # Dependencies
-├── alembic.ini                 # Alembic config
-├── docker-compose.yml          # Docker configuration
-├── Dockerfile                  # Docker image
-└── README.md                   # Documentation
+│   ├── api/v1/          # API routes
+│   ├── core/            # Authentication & config
+│   ├── crud/            # Database operations
+│   ├── models/          # SQLAlchemy models
+│   └── schemas/         # Pydantic schemas
+├── alembic/             # Database migrations
+└── test_api.py          # API testing script
+
+employee_management_FE/
+└── EmployeeManagement/
+    ├── *.xaml           # UI pages
+    ├── *.xaml.cs        # Page code-behind
+    └── appsettings.json # Configuration
 ```
 
-## Installation
+## Next Steps for Learning
 
-### Prerequisites
+### Backend Enhancements
+1. **Add unit tests** using pytest
+2. **Implement caching** with Redis
+3. **Add logging** for better debugging
+4. **Database optimization** with indexes and query optimization
+5. **API versioning** for future updates
+6. **Rate limiting** for security
+7. **Background tasks** with Celery
 
-- Python 3.11+
-- PostgreSQL 12+
-- pip
+### Frontend Enhancements
+1. **Add data validation** before API calls
+2. **Implement MVVM pattern** properly
+3. **Add loading indicators** for better UX
+4. **Error handling improvements** with retry mechanisms
+5. **Offline mode** with local data caching
+6. **Reports generation** with charts and exports
+7. **Real-time updates** with SignalR
 
-### Setup
+### DevOps & Deployment
+1. **Docker containers** for easy deployment
+2. **CI/CD pipeline** with GitHub Actions
+3. **Production database** (PostgreSQL)
+4. **Environment management** (dev/staging/prod)
+5. **Monitoring & logging** in production
+6. **Security hardening** and vulnerability scanning
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd employee_management
-   ```
+## Contributing
 
-2. **Create a virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Create a `.env` file**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Update the `.env` file with your database credentials:
-   ```
-   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/employee_management
-   SECRET_KEY=your-secret-key-here
-   ```
-
-5. **Set up the database**
-   ```bash
-   # Create PostgreSQL database
-   createdb employee_management
-   
-   # Run migrations
-   alembic upgrade head
-   ```
-
-6. **Run the application**
-   ```bash
-   uvicorn app.main:app --reload
-   ```
-
-The API will be available at `http://localhost:8000`
-
-API documentation:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
-
-## Using Docker
-
-1. **Build and run with Docker Compose**
-   ```bash
-   docker-compose up -d
-   ```
-
-2. **Run migrations**
-   ```bash
-   docker-compose exec api alembic upgrade head
-   ```
-
-## Database Migrations
-
-### Create a new migration
-```bash
-alembic revision --autogenerate -m "Description of changes"
-```
-
-### Apply migrations
-```bash
-alembic upgrade head
-```
-
-### Rollback one migration
-```bash
-alembic downgrade -1
-```
-
-## API Endpoints
-
-### Authentication
-- `POST /api/v1/auth/register` - Register a new user
-- `POST /api/v1/auth/login` - Login and get access token
-- `GET /api/v1/auth/me` - Get current user information
-
-### Departments
-- `GET /api/v1/departments` - Get all departments
-- `GET /api/v1/departments/{id}` - Get a department by ID
-- `POST /api/v1/departments` - Create a new department (Manager/Admin)
-- `PUT /api/v1/departments/{id}` - Update a department (Manager/Admin)
-- `DELETE /api/v1/departments/{id}` - Delete a department (Admin)
-
-### Positions
-- `GET /api/v1/positions` - Get all positions
-- `GET /api/v1/positions/{id}` - Get a position by ID
-- `POST /api/v1/positions` - Create a new position (Manager/Admin)
-- `PUT /api/v1/positions/{id}` - Update a position (Manager/Admin)
-- `DELETE /api/v1/positions/{id}` - Delete a position (Admin)
-
-### Employees
-- `GET /api/v1/employees` - Get all employees
-- `GET /api/v1/employees/{id}` - Get an employee by ID
-- `POST /api/v1/employees` - Create a new employee (Manager/Admin)
-- `PUT /api/v1/employees/{id}` - Update an employee (Manager/Admin)
-- `DELETE /api/v1/employees/{id}` - Delete an employee (Admin)
-
-### Salaries
-- `GET /api/v1/salaries` - Get all salaries
-- `GET /api/v1/salaries/{id}` - Get a salary by ID
-- `GET /api/v1/salaries/employee/{employee_id}/current` - Get current salary
-- `POST /api/v1/salaries` - Create a new salary (Manager/Admin)
-- `PUT /api/v1/salaries/{id}` - Update a salary (Manager/Admin)
-- `DELETE /api/v1/salaries/{id}` - Delete a salary (Manager/Admin)
-
-### Attendances
-- `GET /api/v1/attendances` - Get all attendances
-- `GET /api/v1/attendances/{id}` - Get an attendance by ID
-- `GET /api/v1/attendances/employee/{employee_id}/month/{year}/{month}` - Get monthly attendance
-- `POST /api/v1/attendances` - Create a new attendance (Manager/Admin)
-- `PUT /api/v1/attendances/{id}` - Update an attendance (Manager/Admin)
-- `DELETE /api/v1/attendances/{id}` - Delete an attendance (Manager/Admin)
-
-### Leaves
-- `GET /api/v1/leaves` - Get all leaves
-- `GET /api/v1/leaves/{id}` - Get a leave by ID
-- `GET /api/v1/leaves/pending` - Get pending leaves (Manager/Admin)
-- `POST /api/v1/leaves` - Create a new leave request
-- `PUT /api/v1/leaves/{id}` - Update a leave request
-- `POST /api/v1/leaves/{id}/approve` - Approve/reject a leave (Manager/Admin)
-- `DELETE /api/v1/leaves/{id}` - Delete a leave request
-
-## Database Features
-
-### Indexes
-The database includes optimized indexes for:
-- Primary keys (automatic)
-- Foreign keys for faster joins
-- Frequently queried fields (name, email, employee_code, etc.)
-- Composite indexes for common query patterns
-- Date ranges for filtering and sorting
-
-### Constraints
-- Unique constraints on employee_code, email, username
-- Check constraints on salary (must be positive)
-- Date range validations
-- Foreign key constraints with appropriate CASCADE/SET NULL actions
-
-### SQL Optimization Techniques Used
-1. **Indexes**: Single column and composite indexes on frequently queried fields
-2. **Eager Loading**: Using `joinedload` to prevent N+1 query problems
-3. **Query Optimization**: Efficient filtering, pagination, and sorting
-4. **Connection Pooling**: Configured in SQLAlchemy for better performance
-5. **Transaction Management**: Proper use of database transactions
-
-## Authentication
-
-The API uses JWT (JSON Web Tokens) for authentication. Include the token in the Authorization header:
-
-```
-Authorization: Bearer <your_access_token>
-```
-
-## Roles and Permissions
-
-- **Admin**: Full access to all endpoints
-- **Manager**: Can create, update, and delete most resources (except users)
-- **Employee**: Can view most resources and manage their own leave requests
-
-## Development
-
-### Running Tests
-```bash
-pytest
-```
-
-### Code Formatting
-```bash
-black app/
-isort app/
-```
-
-### Type Checking
-```bash
-mypy app/
-```
+This is a learning project. Feel free to:
+1. Add new features
+2. Improve error handling
+3. Enhance UI/UX
+4. Add tests
+5. Optimize performance
+6. Add documentation
 
 ## License
 
-This project is licensed under the MIT License.
+This project is for educational purposes.

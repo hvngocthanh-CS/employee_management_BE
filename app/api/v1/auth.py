@@ -2,10 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from app.database import get_db
-from app.schemas.user import UserCreate, UserLogin, Token
+from app.schemas.user import UserCreate, UserLogin, Token, UserProfile
 from app.models.user import User
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.config import settings
+from app.core.deps import get_current_user
+from app.core.permissions import get_user_permissions, get_menu_permissions
 
 router = APIRouter()
 
@@ -13,7 +15,7 @@ router = APIRouter()
 @router.post("/login", response_model=Token)
 def login(user_in: UserLogin, db: Session = Depends(get_db)):
     """
-    Login với username và password - return JWT token
+    Login với username và password - return JWT token với user info
     """
     # Kiểm tra username trong DB
     user = db.query(User).filter(User.username == user_in.username).first()
@@ -44,10 +46,48 @@ def login(user_in: UserLogin, db: Session = Depends(get_db)):
         expires_delta=access_token_expires
     )
     
+    # Get user permissions and menu visibility
+    permissions = get_user_permissions(user)
+    menu_permissions = get_menu_permissions(user)
+    
     return {
         "access_token": access_token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "role": user.role.value,
+            "employee_id": user.employee_id,
+            "is_active": user.is_active,
+            "permissions": permissions,
+            "menu_permissions": menu_permissions
+        }
     }
+
+
+@router.get("/me", response_model=UserProfile)
+def get_current_user_profile(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get current user profile với permissions
+    """
+    # Get user permissions and menu visibility
+    permissions = get_user_permissions(current_user)
+    menu_permissions = get_menu_permissions(current_user)
+    
+    return UserProfile(
+        id=current_user.id,
+        username=current_user.username,
+        role=current_user.role.value,
+        employee_id=current_user.employee_id,
+        is_active=current_user.is_active,
+        permissions=permissions,
+        menu_permissions=menu_permissions,
+        created_at=current_user.created_at,
+        last_login=current_user.last_login
+    )
 
 
 @router.post("/register")

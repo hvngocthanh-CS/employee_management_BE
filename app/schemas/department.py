@@ -1,33 +1,52 @@
+"""
+Department Schemas
+==================
+Pydantic models for request/response validation.
+
+Demonstrates:
+  - DepartmentCreate: for POST requests (user input)
+  - DepartmentUpdate: for PUT requests (partial updates)
+  - DepartmentResponse: for GET responses (database output)
+"""
+
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime
 
 
-class DepartmentBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100, description="Department name")
-    code: str = Field(..., min_length=1, max_length=20, description="Department code")
-    description: Optional[str] = Field(None, description="Department description")
-
-# Schema cho Create (không cần id, timestamps)
-class DepartmentCreate(DepartmentBase):
-    pass
+class DepartmentCreate(BaseModel):
+    """
+    Schema for creating a new department.
+    Users provide: just the name
+    """
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Department name (must be unique)"
+    )
 
 
 class DepartmentUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    code: Optional[str] = Field(None, min_length=1, max_length=20)
-    description: Optional[str] = None
+    """
+    Schema for updating a department.
+    All fields are optional - only provided fields will be updated.
+    """
+    name: Optional[str] = Field(
+        None,
+        min_length=1,
+        max_length=100,
+        description="Department name"
+    )
 
-# Schema cho Response (đầy đủ thông tin từ database)
-class DepartmentResponse(DepartmentBase):
+
+class DepartmentResponse(BaseModel):
+    """
+    Schema for returning department data from the API.
+    Includes the ID and all fields stored in the database.
+    from_attributes=True tells Pydantic to work with SQLAlchemy objects.
+    """
     id: int
-    created_at: datetime
-    updated_at: datetime
+    name: str
     
     class Config:
-        from_attributes = True
-
-
-# Schema với thống kê (count employees)
-class DepartmentWithStats(DepartmentResponse):
-    employee_count: int = 0
+        from_attributes = True  # Works with SQLAlchemy ORM objects
