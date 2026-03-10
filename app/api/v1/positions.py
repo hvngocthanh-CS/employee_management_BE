@@ -21,19 +21,22 @@ def list_positions(
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    level: Optional[PositionLevel] = None
+    level: Optional[PositionLevel] = None,
+    department_id: Optional[int] = Query(None, description="Filter positions by department")
 ):
     """
-    List all positions (no authentication required for GET)
+    List all positions (no authentication required for GET).
+    Optionally filter by department_id. Cross-department positions (dept=NULL) always included.
     """
+    from app.models.position import Position
+    from sqlalchemy import or_
+    query = db.query(Position)
+    if department_id is not None:
+        # Include both department-specific AND cross-department (NULL) positions
+        query = query.filter(or_(Position.department_id == department_id, Position.department_id.is_(None)))
     if level:
-        positions = crud_position.get_by_level(
-            db, level=level, skip=skip, limit=limit
-        )
-    else:
-        positions = crud_position.get_multi(db, skip=skip, limit=limit)
-    
-    return positions
+        query = query.filter(Position.level == level)
+    return query.offset(skip).limit(limit).all()
 
 
 @router.get("/{position_id}", response_model=PositionResponse)

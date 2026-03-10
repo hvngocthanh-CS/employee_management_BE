@@ -25,6 +25,7 @@ class PositionUpdate(BaseModel):
 class PositionResponse(PositionBase):
     """Schema cho response từ database"""
     id: int
+    department_id: Optional[int] = None
 
     class Config:
         from_attributes = True

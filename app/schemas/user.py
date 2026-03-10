@@ -181,12 +181,15 @@ class TokenData(BaseModel):
     role: Optional[str] = None
 
 
-class UserResponse(UserBase):
-    """Schema cho response - không trả về password"""
+class UserResponse(BaseModel):
+    """Schema cho response - không trả về password, không validate min_length"""
     id: int
-    employee_id: int
+    username: str
+    role: UserRole
+    is_active: bool = True
+    employee_id: Optional[int] = None
     last_login: Optional[datetime] = None
-    created_at: datetime
+    created_at: Optional[datetime] = None
     
     # Nested employee info (optional)
     employee_name: Optional[str] = None

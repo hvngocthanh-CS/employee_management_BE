@@ -98,7 +98,8 @@ def search_departments(
     order: str = Query("asc", description="Sort order: asc or desc"),
     skip: int = Query(0, description="Pagination skip"),
     limit: int = Query(100, description="Pagination limit"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionDependencies.authenticated_user)
 ):
     """
     Advanced department search with filters and sorting.
@@ -163,13 +164,22 @@ def search_departments(
         skip=skip,
         limit=limit
     )
+    
+    # Hide salary data for Employee role
+    from app.models.user import UserRole
+    if current_user.role == UserRole.EMPLOYEE:
+        for dept in results:
+            if "avg_salary" in dept:
+                dept["avg_salary"] = None
+    
     return results
 
 
 @router.post("/compare")
 def compare_departments(
     department_ids: List[int],
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(PermissionDependencies.admin_or_manager)
 ):
     """
     Compare multiple departments side-by-side.
@@ -244,7 +254,8 @@ def compare_departments(
 def list_departments_with_counts(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(PermissionDependencies.authenticated_user)
 ):
     """
     Get all departments with employee counts.
@@ -380,7 +391,8 @@ def delete_department(
 @router.get("/{department_id}/statistics")
 def get_department_statistics(
     department_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(PermissionDependencies.admin_or_manager)
 ):
     """
     Get comprehensive statistics for a department.
@@ -445,7 +457,8 @@ def get_department_employees(
     sort_by: str = Query("name", description="Sort field: name, hire_date, salary"),
     order: str = Query("asc", description="Sort order: asc or desc"),
     position_id: Optional[int] = Query(None, description="Filter by position ID"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: User = Depends(PermissionDependencies.admin_or_manager)
 ):
     """
     Get employees of a department with pagination.

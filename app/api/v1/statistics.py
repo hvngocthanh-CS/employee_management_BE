@@ -11,13 +11,53 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.crud import statistics as crud_statistics
+from app.core.deps import get_current_user
+from app.models.user import User, UserRole
 
 # Create router for statistics endpoints
 router = APIRouter()
 
 
 @router.get("/dashboard")
-def get_dashboard_statistics(db: Session = Depends(get_db)):
+def get_dashboard_statistics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get all dashboard statistics in a single response.
+    
+    Permissions:
+      - Admin/Manager: Full statistics including salary data
+      - Employee: Limited statistics (no salary data)
+    
+    Returns comprehensive metrics including:
+    - Employee counts (total, active, new, on leave)
+    - Department statistics (total, largest, smallest)
+    - Position statistics (total, most common)
+    - Attendance today (present, late, absent, on leave)
+    - Leave requests (pending, approved this month)
+    - Salary statistics (Admin/Manager only)
+    - User counts by role (Admin/Manager only)
+    """
+    metrics = crud_statistics.statistics.get_dashboard_metrics(db)
+    
+    # For Employee role, hide sensitive data
+    if current_user.role == UserRole.EMPLOYEE:
+        # Hide salary statistics
+        metrics["salaries"] = {
+            "total_payroll": None,
+            "average_salary": None,
+            "highest_paid_department": None
+        }
+        # Hide user counts
+        metrics["users"] = {
+            "total": None,
+            "admins": None,
+            "managers": None,
+            "employees": None
+        }
+    
+    return metrics
     """
     Get all dashboard statistics in a single response.
     

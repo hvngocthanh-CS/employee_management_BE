@@ -6,11 +6,13 @@ Extends the base CRUD class with Employee-specific queries.
 
 import string
 import random
-from typing import Optional, List
+from typing import Optional, List, Union
 from sqlalchemy.orm import Session, joinedload
 from app.crud.base import CRUDBase
 from app.models.employee import Employee
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
+from app.models.salary import Salary
+from datetime import date
 
 
 class CRUDEmployee(CRUDBase[Employee, EmployeeCreate, EmployeeUpdate]):
@@ -194,6 +196,71 @@ class CRUDEmployee(CRUDBase[Employee, EmployeeCreate, EmployeeUpdate]):
         db.commit()
         db.refresh(db_obj)
         return db_obj
+
+
+    def filter_by_salary(
+        self,
+        db: Session,
+        *,
+        min_salary: Optional[float] = None,
+        max_salary: Optional[float] = None,
+        department_id: Optional[int] = None,
+        position_id: Optional[int] = None,
+        skip: int = 0,
+        limit: int = 100
+    ) -> List[Employee]:
+        """
+        Filter employees by salary and/or department/position.
+
+        SQL equivalent (when salary filters provided):
+            SELECT DISTINCT employees.*
+            FROM employees
+            JOIN salaries ON salaries.employee_id = employees.id
+            WHERE (salaries.base_salary >= :min_salary OR salaries.base_salary <= :max_salary)
+              AND (salaries.effective_to IS NULL OR salaries.effective_to >= CURRENT_DATE)
+              AND (employees.department_id = :department_id)  -- optional
+              AND (employees.position_id = :position_id)      -- optional
+        
+        When only dept/position filters (no salary):
+            SELECT employees.*
+            FROM employees
+            WHERE employees.department_id = :department_id  -- optional
+              AND employees.position_id = :position_id      -- optional
+        """
+
+        today = date.today()
+
+        query = db.query(self.model)
+
+        # Only join with Salary table if salary filters are provided
+        if min_salary is not None or max_salary is not None:
+            query = (
+                query
+                .join(Salary, Salary.employee_id == self.model.id)
+                .filter((Salary.effective_to == None) | (Salary.effective_to >= today))
+            )
+            if min_salary is not None:
+                query = query.filter(Salary.base_salary >= min_salary)
+            if max_salary is not None:
+                query = query.filter(Salary.base_salary <= max_salary)
+
+        if department_id is not None:
+            query = query.filter(self.model.department_id == department_id)
+        if position_id is not None:
+            query = query.filter(self.model.position_id == position_id)
+
+        return (
+            query
+            .options(
+                joinedload(Employee.department),
+                joinedload(Employee.position),
+                joinedload(Employee.salaries)
+            )
+            .distinct()
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
 
 # Create a global instance to use throughout the app

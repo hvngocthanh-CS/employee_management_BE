@@ -5,8 +5,9 @@ Extends the base CRUD class with Department-specific queries.
 """
 
 from typing import Optional, List
+from datetime import date
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from app.crud.base import CRUDBase
 from app.models.department import Department
 from app.models.employee import Employee
@@ -131,7 +132,8 @@ class CRUDDepartment(CRUDBase[Department, DepartmentCreate, DepartmentUpdate]):
         ).outerjoin(Employee, Employee.department_id == Department.id)\
          .outerjoin(
             Salary,
-            (Salary.employee_id == Employee.id) & (Salary.effective_to == None)
+            (Salary.employee_id == Employee.id) & 
+            or_(Salary.effective_to == None, Salary.effective_to >= date.today())
         ).group_by(Department.id, Department.name)
         
         # SQL WHERE clause - Filter by name (ILIKE for case-insensitive)
@@ -245,7 +247,7 @@ class CRUDDepartment(CRUDBase[Department, DepartmentCreate, DepartmentUpdate]):
         ).join(Employee, Employee.id == Salary.employee_id)\
          .filter(
             Employee.department_id == department_id,
-            Salary.effective_to == None
+            or_(Salary.effective_to == None, Salary.effective_to >= date.today())
         ).first()
         
         # Newest employee (most recent hire_date)
@@ -282,12 +284,12 @@ class CRUDDepartment(CRUDBase[Department, DepartmentCreate, DepartmentUpdate]):
             "newest_employee": {
                 "id": newest_employee.id if newest_employee else None,
                 "name": newest_employee.full_name if newest_employee else "N/A",
-                "hire_date": newest_employee.hire_date.isoformat() if newest_employee else None
+                "hire_date": newest_employee.hire_date.isoformat() if newest_employee and newest_employee.hire_date else None
             } if newest_employee else None,
             "longest_serving_employee": {
                 "id": longest_serving.id if longest_serving else None,
                 "name": longest_serving.full_name if longest_serving else "N/A",
-                "hire_date": longest_serving.hire_date.isoformat() if longest_serving else None
+                "hire_date": longest_serving.hire_date.isoformat() if longest_serving and longest_serving.hire_date else None
             } if longest_serving else None
         }
     
@@ -351,7 +353,8 @@ class CRUDDepartment(CRUDBase[Department, DepartmentCreate, DepartmentUpdate]):
         ).outerjoin(Employee, Employee.department_id == Department.id)\
          .outerjoin(
             Salary,
-            (Salary.employee_id == Employee.id) & (Salary.effective_to == None)
+            (Salary.employee_id == Employee.id) & 
+            or_(Salary.effective_to == None, Salary.effective_to >= date.today())
         ).filter(Department.id.in_(department_ids))\
          .group_by(Department.id, Department.name)\
          .all()
@@ -477,7 +480,8 @@ class CRUDDepartment(CRUDBase[Department, DepartmentCreate, DepartmentUpdate]):
          .outerjoin(Position, Position.id == Employee.position_id)\
          .outerjoin(
             Salary,
-            (Salary.employee_id == Employee.id) & (Salary.effective_to == None)
+            (Salary.employee_id == Employee.id) & 
+            or_(Salary.effective_to == None, Salary.effective_to >= date.today())
         )
         
         # Optional filter by position

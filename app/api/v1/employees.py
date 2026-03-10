@@ -82,7 +82,7 @@ def list_employees(
     limit: int = 100,
     search: Optional[str] = Query(None, min_length=2, max_length=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionDependencies.can_read_employee)
+    _: User = Depends(PermissionDependencies.can_read_employee)
 ):
     """
     Get all employees (Admin/Manager only).
@@ -161,7 +161,7 @@ def get_my_employee_data(
 def create_employee(
     employee_in: EmployeeCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionDependencies.can_create_employee)
+    _: User = Depends(PermissionDependencies.can_create_employee)
 ):
     """
     Create a new employee with user account (Admin/Manager only).
@@ -297,7 +297,7 @@ def update_employee(
     employee_id: int,
     employee_in: EmployeeUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionDependencies.can_update_employee)
+    _: User = Depends(PermissionDependencies.can_update_employee)
 ):
     """
     Update an employee (Admin/Manager only).
@@ -352,7 +352,7 @@ def update_employee(
 def delete_employee(
     employee_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionDependencies.can_delete_employee)
+    _: User = Depends(PermissionDependencies.can_delete_employee)
 ):
     """
     Delete an employee and their user account (Admin only).
@@ -396,13 +396,56 @@ def delete_employee(
     return None
 
 
+@router.get("/filter/by-salary", response_model=List[EmployeeResponse])
+def filter_employees_by_salary(
+    min_salary: Optional[float] = Query(None, description="Lọc nhân viên có lương >= giá trị này"),
+    max_salary: Optional[float] = Query(None, description="Lọc nhân viên có lương <= giá trị này"),
+    department_id: Optional[int] = Query(None, description="Lọc theo phòng ban (tùy chọn)"),
+    position_id: Optional[int] = Query(None, description="Lọc theo vị trí (tùy chọn)"),
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    _: User = Depends(PermissionDependencies.admin_or_manager)
+):
+    """
+    Filter employees by salary and/or department/position (Admin/Manager only).
+
+    Permissions: Admin, Manager
+
+    Query Parameters:
+      min_salary: Lương >= giá trị này (optional)
+      max_salary: Lương <= giá trị này (optional)
+      department_id: Chỉ lấy nhân viên thuộc phòng ban này (optional)
+      position_id: Chỉ lấy nhân viên ở vị trí này (optional)
+
+    Returns:
+      Danh sách nhân viên thỏa điều kiện
+    """
+    # At least one filter must be provided
+    if min_salary is None and max_salary is None and department_id is None and position_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one filter is required (min_salary, max_salary, department_id, or position_id)"
+        )
+    employees = crud_employee.filter_by_salary(
+        db,
+        min_salary=min_salary,
+        max_salary=max_salary,
+        department_id=department_id,
+        position_id=position_id,
+        skip=skip,
+        limit=limit
+    )
+    return [enhance_employee_response(emp) for emp in employees]
+
+
 @router.get("/search/{query}", response_model=List[EmployeeResponse])
 def search_employees(
     query: str,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionDependencies.can_read_employee)
+    _: User = Depends(PermissionDependencies.can_read_employee)
 ):
     """
     Search employees by name or email (Admin/Manager only).
@@ -423,32 +466,4 @@ def search_employees(
     return employees
 
 
-@router.get("/me", response_model=EmployeeResponse)
-def get_my_profile(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Get current user's employee profile.
-    
-    Permissions: All authenticated users with employee_id
-    
-    Returns:
-      Current user's employee data
-    """
-    if not current_user.employee_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No employee record found for current user"
-        )
-    
-    # Use get_by_id_with_relations to eager load department, position, and salaries
-    employee = crud_employee.get_by_id_with_relations(db, id=current_user.employee_id)
-    if not employee:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Employee record not found"
-        )
-    
-    # Return enhanced response format
-    return enhance_employee_response(employee)
+

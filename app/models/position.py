@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Index, Enum
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Index, Enum
 from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
@@ -25,7 +25,11 @@ class Position(Base):
     
     description = Column(Text, nullable=True)
     
-    # Relationship
+    # FK to department (optional — some positions may be cross-department)
+    department_id = Column(Integer, ForeignKey("departments.id", ondelete="SET NULL"), nullable=True, index=True)
+    
+    # Relationships
+    department = relationship("Department", back_populates="positions")
     employees = relationship(
         "Employee",
         back_populates="position",

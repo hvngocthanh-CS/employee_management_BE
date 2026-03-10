@@ -81,8 +81,8 @@ ROLE_PERMISSIONS: dict[UserRole, List[Permission]] = {
     ],
     
     UserRole.MANAGER: [
-        # Manager: Tạo user ✅, Xóa user ❌, Gán role ❌, Xem DS nhân viên ✅, Xem thông tin bản thân ✅, Chấm công ❌
-        Permission.CREATE_USER, Permission.READ_USER,
+        # Manager: Tạo user ❌, Xóa user ❌, Gán role ❌, Xem DS nhân viên ✅, Xem thông tin bản thân ✅, Chấm công ❌
+        # Manager KHÔNG được tạo/xem user - chỉ Admin mới có quyền này
         Permission.CREATE_EMPLOYEE, Permission.READ_EMPLOYEE, Permission.UPDATE_EMPLOYEE,
         Permission.CREATE_DEPARTMENT, Permission.READ_DEPARTMENT, Permission.UPDATE_DEPARTMENT,
         Permission.CREATE_POSITION, Permission.READ_POSITION, Permission.UPDATE_POSITION,
@@ -169,6 +169,9 @@ def require_own_resource_or_permission(permission: Permission):
 # Convenience dependencies for common permission checks
 class PermissionDependencies:
     """Common permission dependencies"""
+    
+    # Any authenticated user
+    authenticated_user = get_current_user
     
     # Admin only
     admin_only = require_role([UserRole.ADMIN])

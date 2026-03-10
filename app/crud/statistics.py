@@ -151,7 +151,7 @@ class CRUDStatistics:
         salary_stats = db.query(
             func.sum(Salary.base_salary).label('total'),
             func.avg(Salary.base_salary).label('average')
-        ).filter(Salary.effective_to == None)\
+        ).filter(or_(Salary.effective_to == None, Salary.effective_to >= date.today()))\
          .first()
         
         total_payroll = float(salary_stats.total or 0)
@@ -171,7 +171,7 @@ class CRUDStatistics:
             func.avg(Salary.base_salary).label('avg_salary')
         ).join(Employee, Employee.department_id == Department.id)\
          .join(Salary, Salary.employee_id == Employee.id)\
-         .filter(Salary.effective_to == None)\
+         .filter(or_(Salary.effective_to == None, Salary.effective_to >= date.today()))\
          .group_by(Department.id, Department.name)\
          .order_by(func.avg(Salary.base_salary).desc())\
          .first()

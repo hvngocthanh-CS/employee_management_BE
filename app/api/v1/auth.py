@@ -21,41 +21,18 @@ router = APIRouter()
 @router.post("/login", response_model=Token)
 def login(user_in: UserLogin, db: Session = Depends(get_db)):
     """
-    Login với email (employee) hoặc username (admin/manager) - return JWT token với user info
+    Login bằng username cho tất cả roles (Admin, Manager, Employee)
     """
-    from app.models.employee import Employee
-    
-    user = None
     identifier = user_in.identifier.strip()
     
-    # Nếu identifier có @, coi như email -> tìm employee trước
-    if '@' in identifier:
-        # Login bằng email (cho employee)
-        employee = db.query(Employee).filter(Employee.email == identifier).first()
-        
-        if not employee:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password",
-            )
-        
-        # Tìm user liên kết với employee
-        user = db.query(User).filter(User.employee_id == employee.id).first()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="No account found for this email",
-            )
-    else:
-        # Login bằng username (cho admin/manager)
-        user = db.query(User).filter(User.username == identifier).first()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
-            )
+    # Tất cả user đều login bằng username
+    user = db.query(User).filter(User.username == identifier).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+        )
     
     # Verify password
     if not verify_password(user_in.password, user.hashed_password):
@@ -134,26 +111,21 @@ def get_current_user_profile(
 
 
 @router.post("/register")
-def register(user_in: UserCreate, db: Session = Depends(get_db)):
+def register(
+    user_in: UserCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionDependencies.can_create_user)
+):
     """
-    Register new admin or manager account.
-    Employee accounts MUST be created by admin/manager through /api/v1/users/ endpoint.
+    Create new user account (Admin only).
+    
+    This endpoint is PROTECTED - only authenticated Admin can create new users.
+    - Admin can create: Admin, Manager, or Employee accounts
+    - For Employee accounts, use /api/v1/employees/ which auto-creates user account
+    
+    Permissions: Admin only
     """
     from app.core.security import get_password_hash
-    
-    # Chặn đăng ký với role EMPLOYEE
-    if user_in.role == UserRole.EMPLOYEE:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Employee accounts cannot be self-registered. Please contact your admin or manager."
-        )
-    
-    # Chỉ cho phép ADMIN và MANAGER tự đăng ký
-    if user_in.role not in [UserRole.ADMIN, UserRole.MANAGER]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid role for registration"
-        )
     
     # Kiểm tra username đã tồn tại?
     existing_user = db.query(User).filter(User.username == user_in.username).first()

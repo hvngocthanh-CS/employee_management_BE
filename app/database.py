@@ -22,7 +22,6 @@ class Base(DeclarativeBase):
     """
     pass
 
-
 # Prepare engine configuration options
 engine_kwargs = {
     "pool_pre_ping": True,  # Test connections before using them

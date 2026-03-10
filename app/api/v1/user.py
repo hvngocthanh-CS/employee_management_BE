@@ -133,6 +133,70 @@ def get_user(
     )
 
 
+@router.post("/admin-manager", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def create_admin_or_manager(
+    *,
+    db: Session = Depends(get_db),
+    user_in: UserCreate,
+    current_user: User = Depends(PermissionDependencies.can_create_user)
+):
+    """
+    Create new Admin or Manager user (no employee_id required).
+    
+    Permissions: Admin only
+    
+    Request Body:
+      {
+        "username": "new_manager",
+        "password": "password123",
+        "role": "admin" | "manager"
+      }
+    
+    Note: Employee accounts should be created via /employees endpoint which auto-creates user.
+    """
+    from app.core.security import get_password_hash
+    
+    # Validate: cannot create employee via this endpoint
+    if user_in.role == UserRole.EMPLOYEE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Employee accounts should be created via /api/v1/employees endpoint"
+        )
+    
+    # Check if username exists
+    existing = db.query(User).filter(User.username == user_in.username).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Username '{user_in.username}' already exists"
+        )
+    
+    # Create user
+    new_user = User(
+        username=user_in.username,
+        hashed_password=get_password_hash(user_in.password),
+        role=user_in.role,
+        employee_id=None,  # Admin/Manager don't need employee_id
+        is_active=True
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    return UserResponse(
+        id=new_user.id,
+        username=new_user.username,
+        role=new_user.role,
+        is_active=new_user.is_active,
+        employee_id=None,
+        last_login=new_user.last_login,
+        created_at=new_user.created_at,
+        employee_name=None,
+        employee_code=None,
+        employee_email=None
+    )
+
+
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(
     *,
@@ -185,6 +249,14 @@ def update_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot deactivate your own account"
+        )
+    
+    # Không cho phép chuyển sang Employee nếu user không có employee_id
+    if user_in.role == UserRole.EMPLOYEE and user.employee_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot change role to Employee - this user has no linked employee record. "
+                   "Admin/Manager accounts created without employee_id cannot become Employee."
         )
     
     try:

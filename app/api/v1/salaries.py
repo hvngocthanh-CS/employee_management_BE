@@ -19,6 +19,153 @@ from app.crud import salary as crud_salary, employee as crud_employee
 router = APIRouter()
 
 
+# =====================================================
+# ENDPOINTS FOR EMPLOYEES TO VIEW THEIR OWN SALARY
+# =====================================================
+
+@router.get("/me", response_model=List[SalaryResponse])
+def get_my_salaries(
+    *,
+    db: Session = Depends(get_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get all salary records of current user.
+    
+    Permissions: All authenticated users (employees can view their own salary)
+    
+    Returns:
+      List of salary records for the current user
+    """
+    if not current_user.employee_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No employee record found for this user"
+        )
+    
+    employee = crud_employee.get(db, id=current_user.employee_id)
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Employee record not found"
+        )
+    
+    salaries = crud_salary.get_by_employee(
+        db, employee_id=current_user.employee_id, skip=skip, limit=limit
+    )
+    
+    result = []
+    for sal in salaries:
+        sal_dict = sal.__dict__.copy()
+        sal_dict['employee_name'] = employee.full_name
+        sal_dict['employee_code'] = employee.employee_code
+        result.append(SalaryResponse(**sal_dict))
+    
+    return result
+
+
+@router.get("/me/current", response_model=SalaryResponse)
+def get_my_current_salary(
+    *,
+    db: Session = Depends(get_db),
+    as_of_date: Optional[date] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get current salary of current user.
+    
+    Permissions: All authenticated users (employees can view their own salary)
+    
+    Returns:
+      Current salary of the logged-in user
+    """
+    if not current_user.employee_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No employee record found for this user"
+        )
+    
+    employee = crud_employee.get(db, id=current_user.employee_id)
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Employee record not found"
+        )
+    
+    salary = crud_salary.get_current_salary(
+        db, employee_id=current_user.employee_id, as_of_date=as_of_date
+    )
+    
+    if not salary:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No current salary found"
+        )
+    
+    return SalaryResponse(
+        **salary.__dict__,
+        employee_name=employee.full_name,
+        employee_code=employee.employee_code
+    )
+
+
+@router.get("/me/history", response_model=SalaryHistory)
+def get_my_salary_history(
+    *,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get salary history of current user.
+    
+    Permissions: All authenticated users (employees can view their own salary)
+    
+    Returns:
+      Complete salary history of the logged-in user
+    """
+    if not current_user.employee_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No employee record found for this user"
+        )
+    
+    employee = crud_employee.get(db, id=current_user.employee_id)
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Employee record not found"
+        )
+    
+    salaries = crud_salary.get_salary_history(db, employee_id=current_user.employee_id)
+    
+    # Get current salary
+    current = crud_salary.get_current_salary(db, employee_id=current_user.employee_id)
+    current_amount = current.base_salary if current else None
+    
+    salary_responses = [
+        SalaryResponse(
+            **s.__dict__,
+            employee_name=employee.full_name,
+            employee_code=employee.employee_code
+        )
+        for s in salaries
+    ]
+    
+    return SalaryHistory(
+        employee_id=current_user.employee_id,
+        employee_name=employee.full_name,
+        employee_code=employee.employee_code,
+        salaries=salary_responses,
+        current_salary=current_amount
+    )
+
+
+# =====================================================
+# ENDPOINTS FOR ADMIN/MANAGER TO VIEW ALL SALARIES
+# =====================================================
+
 @router.get("/", response_model=List[SalaryResponse])
 def list_all_salaries(
     *,

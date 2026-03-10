@@ -38,6 +38,12 @@ class Department(Base):
         cascade="all, delete-orphan"  # Delete employees when dept is deleted
     )
     
+    positions = relationship(
+        "Position",
+        back_populates="department",
+        lazy="selectin"
+    )
+    
     def __repr__(self):
         """String representation for debugging"""
         return f"<Department(id={self.id}, name='{self.name}')>"
