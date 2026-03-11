@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import date, time, datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.core.deps import get_current_user
 from app.core.permissions import PermissionDependencies, check_resource_ownership
@@ -17,6 +17,8 @@ from app.schemas.attendance import (
     AttendanceSummary
 )
 from app.crud import attendance as crud_attendance, employee as crud_employee
+from app.models.employee import Employee as EmployeeModel
+from app.models.department import Department as DepartmentModel
 
 router = APIRouter()
 
@@ -44,44 +46,40 @@ def list_all_attendances(
       end_date: Filter to this date (optional)
     """
     # Admin/Manager can view all attendances
+    from app.models.attendance import Attendance
+    query = db.query(Attendance).options(
+        joinedload(Attendance.employee).joinedload(EmployeeModel.department)
+    )
+
     if employee_id:
-        attendances = crud_attendance.get_by_employee(
-            db, employee_id=employee_id, start_date=start_date, end_date=end_date, skip=skip, limit=limit
-        )
-    else:
-        # Get all attendances (need to add this method to CRUD)
-        from app.models.attendance import Attendance
-        query = db.query(Attendance)
-        
-        if start_date:
-            query = query.filter(Attendance.date >= start_date)
-        if end_date:
-            query = query.filter(Attendance.date <= end_date)
-        
-        attendances = query.order_by(Attendance.date.desc()).offset(skip).limit(limit).all()
-    
-    # Add employee info to each attendance
+        query = query.filter(Attendance.employee_id == employee_id)
+    if start_date:
+        query = query.filter(Attendance.date >= start_date)
+    if end_date:
+        query = query.filter(Attendance.date <= end_date)
+
+    attendances = query.order_by(Attendance.date.desc()).offset(skip).limit(limit).all()
+
     result = []
     for att in attendances:
-        employee = crud_employee.get(db, id=att.employee_id)
-        
+        emp = att.employee
         working_hours = None
         if att.check_in_time and att.check_out_time:
             check_in = datetime.combine(date.today(), att.check_in_time)
             check_out = datetime.combine(date.today(), att.check_out_time)
             working_hours = (check_out - check_in).total_seconds() / 3600
-        
+
         result.append(
             AttendanceResponse(
                 **att.__dict__,
-                attendance_date=att.date,  # Add alias for frontend
-                employee_name=employee.full_name if employee else None,
-                employee_code=employee.employee_code if employee else None,
-                department_name=employee.department.name if employee and employee.department else None,
+                attendance_date=att.date,
+                employee_name=emp.full_name if emp else None,
+                employee_code=emp.employee_code if emp else None,
+                department_name=emp.department.name if emp and emp.department else None,
                 working_hours=working_hours
             )
         )
-    
+
     return result
 
 
@@ -424,17 +422,18 @@ def update_attendance(
     attendance = crud_attendance.update(
         db, db_obj=attendance, obj_in=attendance_in
     )
-    
+
     employee = crud_employee.get(db, id=attendance.employee_id)
-    
+
     working_hours = None
     if attendance.check_in_time and attendance.check_out_time:
         check_in = datetime.combine(date.today(), attendance.check_in_time)
         check_out = datetime.combine(date.today(), attendance.check_out_time)
         working_hours = (check_out - check_in).total_seconds() / 3600
-    
+
     return AttendanceResponse(
         **attendance.__dict__,
+        attendance_date=attendance.date,
         employee_name=employee.full_name if employee else None,
         employee_code=employee.employee_code if employee else None,
         department_name=employee.department.name if employee and employee.department else None,

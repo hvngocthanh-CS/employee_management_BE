@@ -24,7 +24,7 @@ def list_users(
     *,
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(10000, ge=1, le=10000),
     role: Optional[UserRole] = None,
     is_active: Optional[bool] = None,
     current_user: User = Depends(PermissionDependencies.can_read_user)

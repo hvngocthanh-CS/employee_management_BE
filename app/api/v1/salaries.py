@@ -171,7 +171,7 @@ def list_all_salaries(
     *,
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1),
+    limit: int = Query(10000, ge=1, le=10000),
     employee_id: Optional[int] = None,
     current_user: User = Depends(PermissionDependencies.can_read_salary)
 ):
@@ -195,11 +195,14 @@ def list_all_salaries(
     result = []
     for salary in salaries:
         employee = crud_employee.get(db, id=salary.employee_id)
+        user = employee.user if employee else None
         result.append(
             SalaryResponse(
                 **salary.__dict__,
                 employee_name=employee.full_name if employee else None,
-                employee_code=employee.employee_code if employee else None
+                employee_code=employee.employee_code if employee else None,
+                username=user.username if user else None,
+                role=user.role if user else None
             )
         )
     

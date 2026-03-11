@@ -105,7 +105,7 @@ class CRUDLeave(CRUDBase[Leave, LeaveCreate, LeaveUpdate]):
             raise ValueError("Leave not found")
         
         if leave.status != LeaveStatus.PENDING:
-            raise ValueError(f"Cannot approve leave with status: {leave.status}")
+            raise ValueError(f"Cannot approve leave with status: {leave.status.value}")
         
         leave.status = LeaveStatus.APPROVED
         leave.approved_by = approver_id
@@ -128,7 +128,7 @@ class CRUDLeave(CRUDBase[Leave, LeaveCreate, LeaveUpdate]):
             raise ValueError("Leave not found")
         
         if leave.status != LeaveStatus.PENDING:
-            raise ValueError(f"Cannot reject leave with status: {leave.status}")
+            raise ValueError(f"Cannot reject leave with status: {leave.status.value}")
         
         leave.status = LeaveStatus.REJECTED
         leave.approved_by = approver_id

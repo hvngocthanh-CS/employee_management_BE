@@ -58,6 +58,8 @@ class SalaryResponse(SalaryBase):
     # Nested data
     employee_name: Optional[str] = None
     employee_code: Optional[str] = None
+    username: Optional[str] = None
+    role: Optional[str] = None
     
     # Additional fields for frontend compatibility
     amount: Optional[Decimal] = None  # Alias for base_salary
@@ -84,6 +86,8 @@ class SalaryResponse(SalaryBase):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'employee_name': self.employee_name,
             'employee_code': self.employee_code,
+            'username': self.username,
+            'role': self.role,
             'currency': self.currency,
             'notes': self.notes,
         }

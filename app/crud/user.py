@@ -33,7 +33,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         self,
         db: Session,
         skip: int = 0,
-        limit: int = 100,
+        limit: int = 10000,
         role: Optional[UserRole] = None,
         is_active: Optional[bool] = None
     ) -> List[User]:

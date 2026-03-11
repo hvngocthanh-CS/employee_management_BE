@@ -79,7 +79,7 @@ def enhance_employee_response(employee) -> dict:
 @router.get("/", response_model=List[EmployeeResponse])
 def list_employees(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 10000,  # Increased for large datasets
     search: Optional[str] = Query(None, min_length=2, max_length=100),
     db: Session = Depends(get_db),
     _: User = Depends(PermissionDependencies.can_read_employee)
